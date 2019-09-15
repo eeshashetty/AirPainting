@@ -22,9 +22,11 @@ def capture():
 
     while True:
         _, frame = cap.read()
-        f = cv2.flip(frame,1)
+        f = cv2.flip(frame, 1)
+
         kernel = np.ones((6, 6), np.uint8)
         hsv_frame = cv2.cvtColor(f, cv2.COLOR_RGB2HSV)
+
         lhsv = np.array([5, 175, 80])
         uhsv = np.array([255, 255, 255])
 
@@ -32,30 +34,36 @@ def capture():
         mask = cv2.inRange(hsv_frame, lhsv, uhsv)
         clos_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 
-
         # Find contours:
-        contours,_ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        (contours, _) = cv2.findContours(clos_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        final = cv2.bitwise_and(f,f,mask=clos_mask)
-        fin= final
-        #f0 = cv2.add(f0,final)
-        # Draw contours:
-        X,Y,c = 0,0,0
-        points = []
+        if len(contours) > 0:
+            c = max(contours, key=cv2.contourArea)
+            ((x, y), radius) = cv2.minEnclosingCircle(c)
+            if radius > 10:
+                print(radius)
+                cv2.circle(f, (int(x), int(y)), int(radius), (0, 255, 0), 2)
+                M = cv2.moments(c)
+                try:
+                    center = (int(M['m10'] / M['m00']), int(M['m01'] / M['m00']))
+                    points.append(center)
+                except:
+                    pass
 
-        f0 = cv2.add(f0,fin)
-        #cv2.imshow('mask',clos_mask)
-        cv2.imshow("feed", f)
+        for i in range(1, len(points)):
+            if points[i - 1] is None or points[i] is None:
+                continue
+            cv2.line(f, points[i - 1], points[i], (0, 255, 0), 5)
+            cv2.line(f0, points[i - 1], points[i], (255, 255, 255), 5)
 
+        cv2.imshow("feed (press q after drawing)", f)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     #'''
-    cv2.imshow("finalimg",f0)
-    mf = cv2.inRange(cv2.cvtColor(f0,cv2.COLOR_RGB2HSV),lhsv,uhsv)
-    cv2.imshow("finalmask",mf)
-    cv2.imwrite("alph.png",mf)
+    cv2.imshow("final (press q to exit)",f0)
+    cv2.imwrite("alph.png",f0)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -63,16 +71,15 @@ def capture():
 c=1
 flag = 0
 while True:
-    if flag ==1:
-        break
     cap = cv2.VideoCapture(0)
     while True:
         _,f = cap.read()
         f= cv2.flip(f,1)
-        cv2.imshow("press p to draw", f)
-        if cv2.waitKey(1) & 0xFF == ord('p'):
-            cv2.destroyWindow("press p to draw")
+        cv2.imshow("press d to draw (esc to exit)", f)
+        if cv2.waitKey(1) & 0xFF == ord('d'):
+            cv2.destroyWindow("press d to draw (esc to exit)")
             cap.release()
+            points = []
             capture()
             i = resize()
             s = "alph" + str(c) + ".png"
@@ -80,8 +87,9 @@ while True:
             c += 1
             break
         if cv2.waitKey(1) & 0xFF == 27:
-            flag=1
-            break
+           cap.release()
+           sys.exit()
+
 
 cap.release()
 cv2.destroyAllWindows()
