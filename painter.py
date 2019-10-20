@@ -2,6 +2,11 @@ import cv2
 import numpy as np
 import imutils
 import sys
+import keras
+from keras.models import load_model
+
+model = load_model('emnist_model.h5')
+
 
 def resize():
     img = cv2.imread("alph.png")
@@ -27,7 +32,7 @@ def capture():
         kernel = np.ones((6, 6), np.uint8)
         hsv_frame = cv2.cvtColor(f, cv2.COLOR_RGB2HSV)
 
-        lhsv = np.array([5, 175, 80])
+        lhsv = np.array([10, 100, 20])
         uhsv = np.array([255, 255, 255])
 
         # create mask based on hsv range
@@ -41,7 +46,6 @@ def capture():
             c = max(contours, key=cv2.contourArea)
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             if radius > 10:
-                print(radius)
                 cv2.circle(f, (int(x), int(y)), int(radius), (0, 255, 0), 2)
                 M = cv2.moments(c)
                 try:
@@ -71,6 +75,8 @@ def capture():
 c=1
 flag = 0
 while True:
+    if flag==1:
+        break
     cap = cv2.VideoCapture(0)
     while True:
         _,f = cap.read()
@@ -85,11 +91,38 @@ while True:
             s = "alph" + str(c) + ".png"
             cv2.imwrite(s, i)
             c += 1
+            i = i.reshape(-1,28,28,1)
+            model.predict(i)
             break
         if cv2.waitKey(1) & 0xFF == 27:
+           flag = 1
            cap.release()
-           sys.exit()
+           break
+       
+        
+cap = cv2.VideoCapture(0)
 
+while True:
+    _, f0 = cap.read()
+    if cv2.waitKey(0):
+        break
+
+while True:
+    _, frame = cap.read()
+    f = cv2.flip(frame, 1)
+
+    kernel = np.ones((6, 6), np.uint8)
+    hsv_frame = cv2.cvtColor(f, cv2.COLOR_RGB2HSV)
+	print('lol ur mom gay')
+    lhsv = np.array([6, 120, 20])
+    uhsv = np.array([255, 255, 255])
+
+    # create mask based on hsv range
+    mask = cv2.inRange(hsv_frame, lhsv, uhsv)
+    clos_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    cv2.imshow('mask',clos_mask)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
 cv2.destroyAllWindows()
